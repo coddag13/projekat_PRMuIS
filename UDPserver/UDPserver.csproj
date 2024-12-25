@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{86A69CC7-611C-410D-8800-23C691748BD5}</ProjectGuid>
+    <ProjectGuid>{9BFFA9D6-F580-46D5-87CB-9F87FFEB1CBB}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Projekat</RootNamespace>
-    <AssemblyName>Projekat</AssemblyName>
+    <RootNamespace>UDPserver</RootNamespace>
+    <AssemblyName>UDPserver</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -43,7 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="UdpServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
