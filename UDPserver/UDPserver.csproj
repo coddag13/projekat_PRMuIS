@@ -49,5 +49,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Uredjaj\Uredjaj.csproj">
+      <Project>{7c53a7f6-bdcb-4c10-be29-70b89100ae28}</Project>
+      <Name>Uredjaj</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
