@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 
 // Apstraktna klasa za uređaje
+[Serializable]
 public abstract class Uredjaji
 {
     public string Ime { get; set; }
     public Dictionary<string, string> Funkcije { get; set; }
 
-    protected Uredjaji(string ime)
+    public Uredjaji(string ime)
     {
         Ime = ime;
         Funkcije = new Dictionary<string, string>();
@@ -33,16 +34,19 @@ public abstract class Uredjaji
 }
 
 // Implementacija klase Svetlo
+[Serializable]
 public class Svetlo : Uredjaji
 {
     public Svetlo() : base("Svetlo")
     {
         Funkcije.Add("Intenzitet", "50%"); // Podrazumevani intenzitet
         Funkcije.Add("Boja", "Bela");     // Podrazumevana boja
+        Funkcije.Add("Stanje","Ukljuceno");
     }
 }
 
 // Implementacija klase Klima
+[Serializable]
 public class Klima : Uredjaji
 {
     public Klima() : base("Klima")
@@ -83,6 +87,7 @@ public class Klima : Uredjaji
 }
 
 // Implementacija klase TV
+[Serializable]
 public class TV : Uredjaji
 {
     public TV() : base("TV")
@@ -93,6 +98,7 @@ public class TV : Uredjaji
 }
 
 // Implementacija klase Vrata
+[Serializable]
 public class Vrata : Uredjaji
 {
     public Vrata() : base("Vrata")
