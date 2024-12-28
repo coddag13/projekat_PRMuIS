@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
-// Apstraktna klasa za uređaje
+
 [Serializable]
 public abstract class Uredjaji
 {
     public string Ime { get; set; }
     public Dictionary<string, string> Funkcije { get; set; }
+    public List<string> LogAktivnosti { get; set; } = new List<string>();
 
     public Uredjaji(string ime)
     {
@@ -31,98 +33,89 @@ public abstract class Uredjaji
     {
         return string.Join(", ", Funkcije.Select(f => $"{f.Key}: {f.Value}"));
     }
+
+    public void PrikaziUredjaj(string novaVrednost,string status,string funkcija)
+    {
+        Funkcije[funkcija] = novaVrednost;
+
+        string vremenskaOznaka = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        LogAktivnosti.Add($"[{vremenskaOznaka}] Funkcija: {funkcija}, Nova vrednost: {novaVrednost}, Status: {status}");
+
+        Console.WriteLine($"Ime uređaja: {Ime}");
+        Console.WriteLine($"Trenutno stanje: {status}");
+        Console.WriteLine($"Obrada komande za uređaj: {Ime}, Funkcija: {funkcija}, Nova vrednost: {novaVrednost}");
+    }
+
+    public void PrikaziSveUredjaje(List<Uredjaji> uredjaji)
+    {
+        if (uredjaji == null || !uredjaji.Any())
+        {
+            Console.WriteLine("Nema uređaja za prikaz.");
+            return;
+        }
+
+        Console.WriteLine(new string('-', 80));
+        Console.WriteLine($"{"Ime uređaja",-20} {"Funkcija",-20} {"Vrednost",-15} {"Vremenska oznaka",-20}");
+        Console.WriteLine(new string('-', 80));
+
+        foreach (var uredjaj in uredjaji)
+        {
+            foreach (var funkcija in uredjaj.Funkcije)
+            {
+                string vremenskaOznaka = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                Console.WriteLine($"{uredjaj.Ime,-20} {funkcija.Key,-20} {funkcija.Value,-15} {vremenskaOznaka,-20}");
+            }
+        }
+
+        Console.WriteLine(new string('-', 80));
+    }
+
+
+
 }
 
-// Implementacija klase Svetlo
+
+
+
 [Serializable]
 public class Svetlo : Uredjaji
 {
     public Svetlo() : base("Svetlo")
     {
-        Funkcije.Add("Intenzitet", "50%"); // Podrazumevani intenzitet
-        Funkcije.Add("Boja", "Bela");     // Podrazumevana boja
+        Funkcije.Add("Intenzitet", "50%"); 
+        Funkcije.Add("Boja", "Bela");     
         Funkcije.Add("Stanje","Ukljuceno");
     }
 }
 
-// Implementacija klase Klima
+
 [Serializable]
 public class Klima : Uredjaji
 {
     public Klima() : base("Klima")
     {
-        Funkcije.Add("Temperatura", "22°C"); // Podrazumevana temperatura
-        Funkcije.Add("Rezim", "hladi");      // Podrazumevani režim
-    }
-
-    public override void AzurirajFunkciju(string funkcija, string novaVrednost)
-    {
-        if (funkcija == "Temperatura")
-        {
-            if (int.TryParse(novaVrednost.Replace("°C", ""), out _))
-            {
-                base.AzurirajFunkciju(funkcija, novaVrednost);
-            }
-            else
-            {
-                Console.WriteLine($"Nevažeća vrednost za temperaturu: {novaVrednost}");
-            }
-        }
-        else if (funkcija == "Rezim")
-        {
-            if (novaVrednost == "hladi" || novaVrednost == "greje" || novaVrednost == "ventilacija")
-            {
-                base.AzurirajFunkciju(funkcija, novaVrednost);
-            }
-            else
-            {
-                Console.WriteLine($"Nevažeći režim rada: {novaVrednost}");
-            }
-        }
-        else
-        {
-            Console.WriteLine($"Nepoznata funkcija za klimu: {funkcija}");
-        }
+        Funkcije.Add("Temperatura", "22°C"); 
+        Funkcije.Add("Rezim", "hladi");      
     }
 }
 
-// Implementacija klase TV
 [Serializable]
 public class TV : Uredjaji
 {
     public TV() : base("TV")
     {
-        Funkcije.Add("Kanal", "1");         // Podrazumevani kanal
-        Funkcije.Add("JacinaZvuka", "20"); // Podrazumevana jačina zvuka
+        Funkcije.Add("Kanal", "1");         
+        Funkcije.Add("JacinaZvuka", "20"); 
     }
 }
 
-// Implementacija klase Vrata
+
 [Serializable]
 public class Vrata : Uredjaji
 {
     public Vrata() : base("Vrata")
     {
-        Funkcije.Add("Otvoreno", "Ne");   // Podrazumevano zatvorena
-        Funkcije.Add("Zakljucano", "Ne"); // Podrazumevano otključana
-    }
-
-    public override void AzurirajFunkciju(string funkcija, string novaVrednost)
-    {
-        if (funkcija == "Otvoreno" || funkcija == "Zakljucano")
-        {
-            if (novaVrednost.ToLower() == "da" || novaVrednost.ToLower() == "ne")
-            {
-                base.AzurirajFunkciju(funkcija, novaVrednost == "da" ? "Da" : "Ne");
-            }
-            else
-            {
-                Console.WriteLine($"Nevažeća vrednost za {funkcija}: {novaVrednost}");
-            }
-        }
-        else
-        {
-            Console.WriteLine($"Nepoznata funkcija za vrata: {funkcija}");
-        }
+        Funkcije.Add("Otvoreno", "Ne");   
+        Funkcije.Add("Zakljucano", "Ne"); 
     }
 }

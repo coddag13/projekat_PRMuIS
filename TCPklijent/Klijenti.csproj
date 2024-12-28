@@ -102,7 +102,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TCPklijenti.cs" />
+    <Compile Include="Klijent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -110,9 +110,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Uredjaj\Uredjaj.csproj">
+    <ProjectReference Include="..\Uredjaj\PomocneKlase.csproj">
       <Project>{7C53A7F6-BDCB-4C10-BE29-70B89100AE28}</Project>
-      <Name>Uredjaj</Name>
+      <Name>PomocneKlase</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
