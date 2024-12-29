@@ -9,11 +9,12 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using Uredjaj;
 
-namespace Klijent
+namespace Klijenti
 {
     public class Klijent
     {
         List<(string, string)> IzabraneFunkcije = new List<(string, string)>();
+        private readonly Dictionary<string, string> korisnici;
 
         public static void Main(string[] args)
         {
@@ -24,13 +25,22 @@ namespace Klijent
             }
         }
 
-        private void TCPKlijent()
+        public Klijent()
+        {
+            korisnici = new Dictionary<string, string>
+            {
+                { "teodora", "333" },
+                { "danilo", "666" }
+            };
+        }
+
+        public void TCPKlijent()
         {
             try
             {
                 using (var clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                 {
-                    
+                    Korisnik korisnik = new Korisnik();
                     var klijent = new Klijent();
                     Console.WriteLine("Povezivanje na server...");
                     clientSocket.Connect("127.0.0.1", 50000);
@@ -38,56 +48,64 @@ namespace Klijent
 
                     byte[] buffer = new byte[4096];
                     BinaryFormatter formatter = new BinaryFormatter();
+                  
+                        Console.WriteLine("Unesite korisničko ime: ");
+                        string korisnickoIme = Console.ReadLine();
+                        Console.WriteLine("Unesite lozinku: ");
+                        string lozinka = Console.ReadLine();
 
-                    Console.WriteLine("Unesite korisničko ime: ");
-                    string korisnickoIme = Console.ReadLine();
-                    Console.WriteLine("Unesite lozinku: ");
-                    string lozinka = Console.ReadLine();
-
-                    string loginPodaci = $"{korisnickoIme}:{lozinka}";
-                    clientSocket.Send(Encoding.UTF8.GetBytes(loginPodaci));
-
-                    int received = clientSocket.Receive(buffer);
-                    string odgovor = Encoding.UTF8.GetString(buffer, 0, received);
-                    Console.WriteLine($"Odgovor servera: {odgovor}");
-
-                    /*if(odgovor =="USPESNO")
-                    {
-                        Korisnik korisnik=new Korisnik();
-                        int port = korisnik.DodeliPort(korisnickoIme);
-                        korisnik = new Korisnik(korisnickoIme, lozinka,true,port);
-                        korisnik.PrikaziKorisnika();
-                    }
-                    else
-                    {
-                        Korisnik korisnik = new Korisnik(korisnickoIme, lozinka,false,0);
-                        korisnik.PrikaziKorisnika();
-                    }*/
-
-                    if (odgovor == "USPESNO")
-                    {
-                        Console.WriteLine("Prijava uspešna.");
-                        while (true)
+                        while (!(korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka))
                         {
-                            UDPKlijent();  
+                            Console.WriteLine("Unesite korisničko ime: ");
+                            korisnickoIme = Console.ReadLine();
+                            Console.WriteLine("Unesite lozinku: ");
+                            lozinka = Console.ReadLine();
+                        }
 
-                            Console.WriteLine("\nDa li želite ponovo da izaberete uređaj? (da/ne)");
-                            string odgovorNaPitanje = Console.ReadLine();
-                            if (odgovorNaPitanje.ToLower() != "da")
+
+                        string loginPodaci = $"{korisnickoIme}:{lozinka}";
+                        clientSocket.Send(Encoding.UTF8.GetBytes(loginPodaci));
+
+                        int received = clientSocket.Receive(buffer);
+                        string odgovor = Encoding.UTF8.GetString(buffer, 0, received);
+                        Console.WriteLine($"Odgovor servera: {odgovor}");
+
+                        if (odgovor == "USPESNO")
+                        {
+                            Console.WriteLine("Prijava uspešna.");
+                            int port = korisnik.DodeliPort(korisnickoIme);
+                            Console.WriteLine($"Dodeljen port korisniku je:{port}");
+                            while (true)
                             {
-                                break; 
-                            }
-                            else
-                            {
-                                Console.Clear(); 
+                                UDPKlijent();
+
+                                string odgovorNaPitanje;
+
+                                do
+                                {
+                                    Console.WriteLine("\nDa li želite ponovo da izaberete uređaj? (da/ne)");
+                                    odgovorNaPitanje = Console.ReadLine();
+
+                                } while (odgovorNaPitanje.ToLower() != "da" && odgovorNaPitanje.ToLower() != "ne");
+
+                                if (odgovorNaPitanje.ToLower() == "ne")
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    Console.Clear();
+                                }
+
                             }
                         }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Prijava neuspešna.");
-                    }
-                }
+                        else
+                        {
+                            Console.WriteLine("Prijava neuspešna.");
+                        }
+
+                    } 
+                
             }
             catch (Exception ex)
             {
@@ -95,7 +113,7 @@ namespace Klijent
             }
         }
 
-        private void UDPKlijent()
+        public void UDPKlijent()
         {
             try
             {
@@ -108,6 +126,16 @@ namespace Klijent
                 udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
 
                 byte[] responseBytes = udpClient.Receive(ref serverEP);
+                string poruka = Encoding.UTF8.GetString(responseBytes);
+
+                if (poruka == "Sesija je istekla. Ponovno logovanje...")
+                {
+                    Console.Clear();
+                    Console.WriteLine("Sesija je istekla. Ponovno logovanje...");
+                    TCPKlijent(); 
+                    return; 
+                }
+
                 List<Uredjaji> uredjaji;
                 using (MemoryStream ms = new MemoryStream(responseBytes))
                 {
@@ -160,9 +188,7 @@ namespace Klijent
 
                     Console.WriteLine("Unesite novu vrednost:");
                     string novaVrednost = Console.ReadLine();
-                    //Console.WriteLine($"Korisnik je izabrao uredjaj:{izabraniUredjaj.Ime}");
-                    //Console.WriteLine($"Azurirana vrednost funkcije:{funkcija} je {novaVrednost}");
-
+                    
                     using (MemoryStream ms = new MemoryStream())
                     {
                         formatter.Serialize(ms, izabraniUredjaj.Ime);

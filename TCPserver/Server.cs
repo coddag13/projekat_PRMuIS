@@ -47,10 +47,8 @@ public class Server
             var klijentSocket = serverSocket.Accept();
             Console.WriteLine("Povezan klijent.");
             Task.Run(() => TCPServer(klijentSocket));
-            Task.Run(() =>
-            {
-                UDPServer(klijentSocket);
-            });
+            Task.Run(() =>UDPServer(klijentSocket));
+            
         }
     }
 
@@ -62,7 +60,6 @@ public class Server
             {
                 byte[] buffer = new byte[4096];
                 BinaryFormatter formatter = new BinaryFormatter();
-
                 int brBajtova = klijentSocket.Receive(buffer);
                 string[] podaci = Encoding.UTF8.GetString(buffer, 0, brBajtova).Split(':');
                 Console.WriteLine("Povezan klijent.");
@@ -75,7 +72,8 @@ public class Server
 
                 string korisnickoIme = podaci[0];
                 string lozinka = podaci[1];
-
+               
+                
                 if (korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka)
                 {
                     klijentSocket.Send(Encoding.UTF8.GetBytes("USPESNO"));
@@ -89,51 +87,63 @@ public class Server
         catch (Exception e)
         {
             Console.WriteLine($"Greška: {e.Message}");
-        }  
+        }
+        finally
+        {
+            klijentSocket.Close();
+            Console.WriteLine("Veza sa klijentom zatvorena.");
+        }
+
+
     }
 
     private void UDPServer(Socket klijentSocket)
     {
-        Korisnik korisnik=new Korisnik();
-        
-        
+       
         UdpClient udpServer = new UdpClient(6000);
         Console.WriteLine("Server je pokrenut..");
-
         IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
         klijentSocket.Blocking = false;
 
-        Random random = new Random();
-        int ciklus=random.Next(10, 50);
+        Korisnik korisnik = new Korisnik();
+        string korisnickoIme = korisnik.DodeliIme();
+        int port = korisnik.DodeliPort(korisnickoIme);
+        Dictionary<int, DateTime> korisnickiPortovi = new Dictionary<int, DateTime>
+        {
+            { port, DateTime.Now }
+        };
 
         while (true)
         {
             try
             {
-                List<Socket> readSockets = new List<Socket> { udpServer.Client };
-                Socket.Select(readSockets, null, null, 1000000);
-                string korisnickoIme = korisnik.DodeliIme();
-                int port = korisnik.DodeliPort(korisnickoIme);
-                
+                List<int> zatvaranjePortova = new List<int>();
+                foreach (var portInfo in korisnickiPortovi)
+                {
+                    if ((DateTime.Now - portInfo.Value).TotalMinutes > 1)
+                    {
+                        zatvaranjePortova.Add(portInfo.Key);
+                    }
+                }
+                foreach (int port2 in zatvaranjePortova)
+                {
+                    korisnickiPortovi.Remove(port2);
+                    Console.WriteLine($"Sesija za port {port2} je istekla. Port je zatvoren.");
+                    string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
+                    Console.WriteLine($"{porukaZaKlijenta}");
+                    byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
+                    udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
+                }
 
+                List<Socket> readSockets = new List<Socket> { udpServer.Client };
+                Socket.Select(readSockets, null, null, 10000);
+                
                 if (readSockets.Count > 0)
                 {
                     byte[] receivedBytes = udpServer.Receive(ref udpClientEndPoint);
                     string primljenaPoruka = Encoding.UTF8.GetString(receivedBytes);
 
                     ObradaKomande(primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
-                }
-
-                
-                string vremenskaOznaka = DateTime.Now.ToString("HH:mm:ss");
-                string[] vreme = vremenskaOznaka.Split(':');
-                int s = int.Parse(vreme[2]);
-                if (s==ciklus)
-                {
-                    port = 0;
-                    Console.WriteLine("Port je zatvoren.Ako zelite da nastavite morate opet da se prijavite.");
-                    korisnik.DodeliPort(korisnickoIme);
-
                 }
 
             }
