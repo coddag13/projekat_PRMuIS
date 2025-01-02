@@ -15,6 +15,10 @@ namespace Klijenti
     {
         List<(string, string)> IzabraneFunkcije = new List<(string, string)>();
         private readonly Dictionary<string, string> korisnici;
+        byte[] responseBytes;
+        UdpClient udpClient = new UdpClient();
+        IPEndPoint serverEP = new IPEndPoint(IPAddress.Loopback, 6000);
+        BinaryFormatter formatter = new BinaryFormatter();
 
         public static void Main(string[] args)
         {
@@ -97,7 +101,21 @@ namespace Klijenti
                                     Console.Clear();
                                 }
 
+                           /* responseBytes = udpClient.Receive(ref serverEP);
+                            string odgovor1 = Encoding.UTF8.GetString(responseBytes);
+                            Console.WriteLine($"Odgovor servera: {odgovor1}");
+
+                            if (odgovor1 == "Sesija je istekla. Ponovno logovanje...")
+                            {
+                                Console.Clear();
+                                IzabraneFunkcije.Clear();
+                                Console.WriteLine("Sesija je istekla. Ponovno logovanje...");
+                                udpClient.Close();
+                                TCPKlijent();
+                                return;
                             }
+                           */
+                        }
                         }
                         else
                         {
@@ -117,9 +135,9 @@ namespace Klijenti
         {
             try
             {
-                UdpClient udpClient = new UdpClient();
-                IPEndPoint serverEP = new IPEndPoint(IPAddress.Loopback, 6000);
-                BinaryFormatter formatter = new BinaryFormatter();
+                //UdpClient udpClient = new UdpClient();
+                //IPEndPoint serverEP = new IPEndPoint(IPAddress.Loopback, 6000);
+                //BinaryFormatter formatter = new BinaryFormatter();
 
                 string zahtev = "LISTA";
                 byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
@@ -127,14 +145,6 @@ namespace Klijenti
 
                 byte[] responseBytes = udpClient.Receive(ref serverEP);
                 string poruka = Encoding.UTF8.GetString(responseBytes);
-
-                if (poruka == "Sesija je istekla. Ponovno logovanje...")
-                {
-                    Console.Clear();
-                    Console.WriteLine("Sesija je istekla. Ponovno logovanje...");
-                    TCPKlijent(); 
-                    return; 
-                }
 
                 List<Uredjaji> uredjaji;
                 using (MemoryStream ms = new MemoryStream(responseBytes))
@@ -199,8 +209,8 @@ namespace Klijenti
                     }
 
                     responseBytes = udpClient.Receive(ref serverEP);
-                    string odgovor = Encoding.UTF8.GetString(responseBytes);
-                    Console.WriteLine($"Odgovor servera: {odgovor}");
+                    string odgovor1 = Encoding.UTF8.GetString(responseBytes);
+                    Console.WriteLine($"Odgovor servera: {odgovor1}");
                 }
                 else
                 {

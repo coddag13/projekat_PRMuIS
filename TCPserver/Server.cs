@@ -16,6 +16,10 @@ public class Server
     private readonly Dictionary<string, string> korisnici;
 
     private readonly Dictionary<string, Uredjaji> uredjaji;
+
+    Dictionary<int, DateTime> korisnickiPortovi=new Dictionary<int, DateTime>();
+
+    Korisnik korisnik = new Korisnik();
     public Server()
     {
         uredjaji = new Dictionary<string, Uredjaji>
@@ -72,8 +76,10 @@ public class Server
 
                 string korisnickoIme = podaci[0];
                 string lozinka = podaci[1];
+
+                int port = korisnik.DodeliPort(korisnickoIme);
+                korisnickiPortovi.Add(port,DateTime.Now);
                
-                
                 if (korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka)
                 {
                     klijentSocket.Send(Encoding.UTF8.GetBytes("USPESNO"));
@@ -88,13 +94,7 @@ public class Server
         {
             Console.WriteLine($"Greška: {e.Message}");
         }
-        finally
-        {
-            klijentSocket.Close();
-            Console.WriteLine("Veza sa klijentom zatvorena.");
-        }
-
-
+        
     }
 
     private void UDPServer(Socket klijentSocket)
@@ -104,14 +104,6 @@ public class Server
         Console.WriteLine("Server je pokrenut..");
         IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
         klijentSocket.Blocking = false;
-
-        Korisnik korisnik = new Korisnik();
-        string korisnickoIme = korisnik.DodeliIme();
-        int port = korisnik.DodeliPort(korisnickoIme);
-        Dictionary<int, DateTime> korisnickiPortovi = new Dictionary<int, DateTime>
-        {
-            { port, DateTime.Now }
-        };
 
         while (true)
         {
@@ -132,7 +124,17 @@ public class Server
                     string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
                     Console.WriteLine($"{porukaZaKlijenta}");
                     byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
-                    udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
+
+                    try
+                    {
+                        udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
+                        Console.WriteLine("Poruka o isteku sesije poslata klijentu.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Greška pri slanju poruke: {ex.Message}");
+                    }
+                    //udpServer.Close();
                 }
 
                 List<Socket> readSockets = new List<Socket> { udpServer.Client };

@@ -24,7 +24,6 @@ namespace Uredjaj
         }
 
         public Korisnik() { }
-
         public string DodeliIme()
         {
             return KorisnickoIme;
@@ -40,7 +39,6 @@ namespace Uredjaj
 
         public int DodeliPort(string korisnickoIme)
         {
-
             int hashCode = korisnickoIme.GetHashCode();
             int port = 50001 + (hashCode % 100);
 
