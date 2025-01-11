@@ -34,18 +34,7 @@ public abstract class Uredjaji
         return string.Join(", ", Funkcije.Select(f => $"{f.Key}: {f.Value}"));
     }
 
-    public void PrikaziUredjaj(string novaVrednost,string status,string funkcija)
-    {
-        Funkcije[funkcija] = novaVrednost;
-
-        string vremenskaOznaka = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        LogAktivnosti.Add($"[{vremenskaOznaka}] Funkcija: {funkcija}, Nova vrednost: {novaVrednost}, Status: {status}");
-
-        Console.WriteLine($"Ime uređaja: {Ime}");
-        Console.WriteLine($"Trenutno stanje: {status}");
-        Console.WriteLine($"Obrada komande za uređaj: {Ime}, Funkcija: {funkcija}, Nova vrednost: {novaVrednost}");
-    }
-
+  
     public void PrikaziSveUredjaje(List<Uredjaji> uredjaji)
     {
         if (uredjaji == null || !uredjaji.Any())

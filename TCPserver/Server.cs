@@ -112,7 +112,7 @@ public class Server
                 List<int> zatvaranjePortova = new List<int>();
                 foreach (var portInfo in korisnickiPortovi)
                 {
-                    if ((DateTime.Now - portInfo.Value).TotalMinutes > 1)
+                    if ((DateTime.Now - portInfo.Value).TotalSeconds > 30)
                     {
                         zatvaranjePortova.Add(portInfo.Key);
                     }
@@ -187,7 +187,7 @@ public class Server
 
                     byte[] response = Encoding.UTF8.GetBytes($"Uspješno: {status}");
                     device.PrikaziSveUredjaje(uredjaji.Values.ToList());
-                    //device.PrikaziUredjaj(newValue,status,function);
+                   
                     udpServer.Send(response, response.Length, udpClientEndPoint);
                 }
                 else

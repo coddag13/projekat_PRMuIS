@@ -23,10 +23,8 @@ namespace Klijenti
         public static void Main(string[] args)
         {
             var klijent=new Klijent();
-            while (true)
-            {
-                klijent.TCPKlijent();
-            }
+           
+            klijent.TCPKlijent();
         }
 
         public Klijent()
@@ -40,8 +38,10 @@ namespace Klijenti
 
         public void TCPKlijent()
         {
-            try
+            while (true)
             {
+                try
+                {
                 using (var clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                 {
                     Korisnik korisnik = new Korisnik();
@@ -66,7 +66,6 @@ namespace Klijenti
                             lozinka = Console.ReadLine();
                         }
 
-
                         string loginPodaci = $"{korisnickoIme}:{lozinka}";
                         clientSocket.Send(Encoding.UTF8.GetBytes(loginPodaci));
 
@@ -74,7 +73,14 @@ namespace Klijenti
                         string odgovor = Encoding.UTF8.GetString(buffer, 0, received);
                         Console.WriteLine($"Odgovor servera: {odgovor}");
 
-                        if (odgovor == "USPESNO")
+
+                    if (odgovor == "Sesija je istekla. Ponovno logovanje...")
+                    {
+                            Console.WriteLine("Sesija je istekla. Molimo, prijavite se ponovo.");
+                            continue;
+                    }
+
+                    if (odgovor == "USPESNO")
                         {
                             Console.WriteLine("Prijava uspešna.");
                             int port = korisnik.DodeliPort(korisnickoIme);
@@ -105,15 +111,6 @@ namespace Klijenti
                             string odgovor1 = Encoding.UTF8.GetString(responseBytes);
                             Console.WriteLine($"Odgovor servera: {odgovor1}");
 
-                            if (odgovor1 == "Sesija je istekla. Ponovno logovanje...")
-                            {
-                                Console.Clear();
-                                IzabraneFunkcije.Clear();
-                                Console.WriteLine("Sesija je istekla. Ponovno logovanje...");
-                                udpClient.Close();
-                                TCPKlijent();
-                                return;
-                            }
                            */
                         }
                         }
@@ -128,6 +125,7 @@ namespace Klijenti
             catch (Exception ex)
             {
                 Console.WriteLine($"Greška: {ex.Message}");
+            }
             }
         }
 
