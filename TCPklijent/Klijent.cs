@@ -77,7 +77,7 @@ namespace Klijenti
                     if (odgovor == "Sesija je istekla. Ponovno logovanje...")
                     {
                             Console.WriteLine("Sesija je istekla. Molimo, prijavite se ponovo.");
-                            continue;
+                            Console.Clear();
                     }
 
                     if (odgovor == "USPESNO")
@@ -85,10 +85,10 @@ namespace Klijenti
                             Console.WriteLine("Prijava uspešna.");
                             int port = korisnik.DodeliPort(korisnickoIme);
                             Console.WriteLine($"Dodeljen port korisniku je:{port}");
+                            
                             while (true)
                             {
                                 UDPKlijent();
-
                                 string odgovorNaPitanje;
 
                                 do
