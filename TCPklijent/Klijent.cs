@@ -197,6 +197,7 @@ namespace Klijenti
                     Console.WriteLine("Unesite novu vrednost:");
                     string novaVrednost = Console.ReadLine();
                     
+                    
                     using (MemoryStream ms = new MemoryStream())
                     {
                         formatter.Serialize(ms, izabraniUredjaj.Ime);
@@ -204,9 +205,11 @@ namespace Klijenti
                         formatter.Serialize(ms, novaVrednost);
                         byte[] dataToSend = ms.ToArray();
                         udpClient.Send(dataToSend, dataToSend.Length, serverEP);
+                        
                     }
-
+                    
                     responseBytes = udpClient.Receive(ref serverEP);
+                    Console.WriteLine("Vrednost poslata serveru");
                     string odgovor1 = Encoding.UTF8.GetString(responseBytes);
                     Console.WriteLine($"Odgovor servera: {odgovor1}");
                 }
