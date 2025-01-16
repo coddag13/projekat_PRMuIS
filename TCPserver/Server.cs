@@ -111,7 +111,6 @@ public class Server
 
             }
         
-
     }
 
     private  void ServerMetode(Socket klijentSocket)
