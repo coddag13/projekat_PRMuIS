@@ -16,7 +16,7 @@ public abstract class Uredjaji
         Ime = ime;
         Funkcije = new Dictionary<string, string>();
     }
-
+    
     public virtual void AzurirajFunkciju(string funkcija, string novaVrednost)
     {
         if (Funkcije.ContainsKey(funkcija))
