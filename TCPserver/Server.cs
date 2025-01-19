@@ -24,7 +24,7 @@ public class Server
 
     private readonly List<(string,int)> klijenti = new List<(string,int)>();
 
-    private UdpClient udpServer = new UdpClient(6000); // Jedan UdpClient za ceo server
+    private UdpClient udpServer = new UdpClient(6000);
 
     public Server()
     {
@@ -67,7 +67,7 @@ public class Server
         try
         {
             Console.WriteLine("Server je pokrenut...");
-            
+
             IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
             klijentSocket.Blocking = false;
 
@@ -77,7 +77,7 @@ public class Server
 
             while (true)
             {
-
+               
                 List<Socket> readSockets = new List<Socket> { klijentSocket };
                 Socket.Select(readSockets, null, null, 10000);
 
@@ -123,6 +123,7 @@ public class Server
 
                 foreach (int port2 in zatvaranjePortova)
                 {
+                    Console.Clear();
                     korisnickiPortovi.Remove(port2);
                     Console.WriteLine($"Sesija za port {port2} je istekla. Port je zatvoren.");
 
@@ -161,11 +162,9 @@ public class Server
     }
 
 
-
     private Uredjaji ObradaKomande(Socket klijentSocket,string primljenaPoruka, UdpClient udpServer, IPEndPoint udpClientEndPoint, byte[] receivedBytes)
     {
         BinaryFormatter formatter = new BinaryFormatter();
-        //klijentSocket.Blocking = false;
         Uredjaji device=null;
         
         if (primljenaPoruka == "LISTA")
