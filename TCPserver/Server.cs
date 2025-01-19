@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -20,6 +21,11 @@ public class Server
     Dictionary<int, DateTime> korisnickiPortovi=new Dictionary<int, DateTime>();
 
     Korisnik korisnik = new Korisnik();
+
+    private readonly List<(string,int)> klijenti = new List<(string,int)>();
+
+    private UdpClient udpServer = new UdpClient(6000); // Jedan UdpClient za ceo server
+
     public Server()
     {
         uredjaji = new Dictionary<string, Uredjaji>
@@ -46,8 +52,7 @@ public class Server
         while (true)
         {
             var klijentSocket = serverSocket.Accept();
-           // Mesavina(klijentSocket); 
-           Serveri(klijentSocket); 
+            Task.Run(() => Serveri(klijentSocket));
         }
     }
    
@@ -56,24 +61,28 @@ public class Server
         var server = new Server();
         server.Pokreni();
     }
+
     private void Serveri(Socket klijentSocket)
     {
         try
         {
-            UdpClient udpServer = new UdpClient(6000);
-            Console.WriteLine("Server je pokrenut..");
+            Console.WriteLine("Server je pokrenut...");
+            
             IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
             klijentSocket.Blocking = false;
 
+            Uredjaji device = null;
+            string korisnickoIme = null;
+            int port = 0;
+
             while (true)
             {
-                // Prvo proveravamo da li je TCP soket spreman za čitanje
+
                 List<Socket> readSockets = new List<Socket> { klijentSocket };
-                Socket.Select(readSockets, null, null, 10000); // Timeout 10 sekundi
+                Socket.Select(readSockets, null, null, 10000);
 
                 if (readSockets.Count > 0)
                 {
-                    // Obrada TCP klijenta
                     byte[] buffer = new byte[4096];
                     int brBajtova = klijentSocket.Receive(buffer);
                     string[] podaci = Encoding.UTF8.GetString(buffer, 0, brBajtova).Split(':');
@@ -85,15 +94,16 @@ public class Server
                         continue;
                     }
 
-                    string korisnickoIme = podaci[0];
+                    korisnickoIme = podaci[0];
                     string lozinka = podaci[1];
 
-                    int port = korisnik.DodeliPort(korisnickoIme);
-                    korisnickiPortovi.Add(port, DateTime.Now);
+                    port = korisnik.DodeliPort(korisnickoIme);
+                    korisnickiPortovi[port] = DateTime.Now;
 
                     if (korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka)
                     {
                         klijentSocket.Send(Encoding.UTF8.GetBytes("USPESNO"));
+                        klijenti.Add((korisnickoIme, port));
                     }
                     else
                     {
@@ -101,36 +111,30 @@ public class Server
                     }
                 }
 
-                // Obrada UDP klijenta (isti princip sa UDP)
                 List<int> zatvaranjePortova = new List<int>();
+
                 foreach (var portInfo in korisnickiPortovi)
                 {
-                    if ((DateTime.Now - portInfo.Value).TotalMinutes > 1)
-                        if ((DateTime.Now - portInfo.Value).TotalSeconds > 30)
-                        {
-                            zatvaranjePortova.Add(portInfo.Key);
-                        }
+                    if ((DateTime.Now - portInfo.Value).TotalSeconds > 30)
+                    {
+                        zatvaranjePortova.Add(portInfo.Key);
+                    }
                 }
+
                 foreach (int port2 in zatvaranjePortova)
                 {
                     korisnickiPortovi.Remove(port2);
                     Console.WriteLine($"Sesija za port {port2} je istekla. Port je zatvoren.");
-                    string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
-                    Console.WriteLine($"{porukaZaKlijenta}");
-                    byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
 
-                    try
-                    {
-                        udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
-                        Console.WriteLine("Poruka o isteku sesije poslata klijentu.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Greška pri slanju poruke: {ex.Message}");
-                    }
+                    string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
+                    byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
+                    klijenti.Remove((korisnickoIme, port2));
+
+                    udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
+
+                    break;
                 }
 
-                // Provera UDP soketa
                 List<Socket> readUdpSockets = new List<Socket> { udpServer.Client };
                 Socket.Select(readUdpSockets, null, null, 10000);
 
@@ -139,7 +143,14 @@ public class Server
                     byte[] receivedBytes = udpServer.Receive(ref udpClientEndPoint);
                     string primljenaPoruka = Encoding.UTF8.GetString(receivedBytes);
 
-                    ObradaKomande(klijentSocket, primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
+                    if (primljenaPoruka == "ne")
+                    {
+                        Console.Clear();
+                        Console.WriteLine($"Korisnik: {korisnickoIme} i njegov port je: {port}");
+                        device?.PrikaziSveUredjaje(uredjaji.Values.ToList());
+                    }
+
+                    device = ObradaKomande(klijentSocket, primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
                 }
             }
         }
@@ -148,194 +159,16 @@ public class Server
             Console.WriteLine($"Greška: {e.Message}");
         }
     }
-    /* private void Mesavina(Socket klijentSocket)
-     {
-         UdpClient udpServer = new UdpClient(6000);
-         Console.WriteLine("Server je pokrenut..");
-         IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-
-             try
-             {
-                 byte[] buffer = new byte[4096];
-                 BinaryFormatter formatter = new BinaryFormatter();
-                 int brBajtova = klijentSocket.Receive(buffer);
-                 string[] podaci = Encoding.UTF8.GetString(buffer, 0, brBajtova).Split(':');
-                 Console.WriteLine("Povezan klijent.");
-
-                 if (podaci.Length != 2)
-                 {
-                     klijentSocket.Send(Encoding.UTF8.GetBytes("GRESKA"));
-                     return;
-                 }
-
-                 string korisnickoIme = podaci[0];
-                 string lozinka = podaci[1];
-
-                 int port = korisnik.DodeliPort(korisnickoIme);
-                 korisnickiPortovi.Add(port, DateTime.Now);
-
-                 if (korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka)
-                 {
-                     klijentSocket.Send(Encoding.UTF8.GetBytes("USPESNO"));
-                 }
-                 else
-                 {
-                     klijentSocket.Send(Encoding.UTF8.GetBytes("NEUSPESNO"));
-                 }
 
 
 
-                 List<Socket> readSockets = new List<Socket> { udpServer.Client };
-                 Socket.Select(readSockets, null, null, 10000);
-
-                 if (readSockets.Count > 0)
-                 {
-                     byte[] receivedBytes = udpServer.Receive(ref udpClientEndPoint);
-                     string primljenaPoruka = Encoding.UTF8.GetString(receivedBytes);
-
-                     ObradaKomande(klijentSocket,primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
-                 }
-
-             }
-             catch (Exception ex)
-             {
-                 Console.WriteLine($"Greška: {ex.Message}");
-
-            }
-        
-
-    }
-
-    /*private  void ServerMetode(Socket klijentSocket)
-    {
-        UdpClient udpServer = new UdpClient(6000); // Napravite UDP server ovde
-
-        try
-        {
-            while (true)
-            {
-                byte[] buffer = new byte[4096];
-                int brBajtova = klijentSocket.Receive(buffer);
-                string[] podaci = Encoding.UTF8.GetString(buffer, 0, brBajtova).Split(':');
-                Console.WriteLine("Povezan klijent.");
-
-                if (podaci.Length != 2)
-                {
-                    klijentSocket.Send(Encoding.UTF8.GetBytes("GRESKA"));
-                    return;
-                }
-
-                string korisnickoIme = podaci[0];
-                string lozinka = podaci[1];
-
-                if (korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka)
-                {
-                    klijentSocket.Send(Encoding.UTF8.GetBytes("USPESNO"));
-                }
-                else
-                {
-                    klijentSocket.Send(Encoding.UTF8.GetBytes("NEUSPESNO"));
-                }
-
-                // Ovdje pokrećemo UDP komunikaciju sa klijentom
-                List<Socket> readSockets = new List<Socket> { udpServer.Client };
-                Socket.Select(readSockets, null, null, 10000); // čekaj na podatke
-                if (readSockets.Count > 0)
-                {
-                    IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                    byte[] receivedBytes = udpServer.Receive(ref udpClientEndPoint);
-                    string primljenaPoruka = Encoding.UTF8.GetString(receivedBytes);
-                    ObradaKomande(klijentSocket, primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Greška: {e.Message}");
-        }
-    }*/
-
-    /*private void ServerMetode1(Socket klijentSocket)
-    {
-        
-        using (var udpServer = new UdpClient(6000))
-        {
-            IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            
-            try
-            {
-                while (true)
-                {
-                    byte[] buffer = new byte[4096];
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    int brBajtova = klijentSocket.Receive(buffer);
-                    string[] podaci = Encoding.UTF8.GetString(buffer, 0, brBajtova).Split(':');
-                    Console.WriteLine("Povezan klijent.");
-
-                    if (podaci.Length != 2)
-                    {
-                        klijentSocket.Send(Encoding.UTF8.GetBytes("GRESKA"));
-                        return;
-                    }
-
-                    string korisnickoIme = podaci[0];
-                    string lozinka = podaci[1];
-
-                    int port = korisnik.DodeliPort(korisnickoIme);
-                    korisnickiPortovi.Add(port, DateTime.Now);
-
-                    if (korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka)
-                    {
-                        klijentSocket.Send(Encoding.UTF8.GetBytes("USPESNO"));
-                    }
-                    else
-                    {
-                        klijentSocket.Send(Encoding.UTF8.GetBytes("NEUSPESNO"));
-                    }
-
-                    List<int> zatvaranjePortova = new List<int>();
-                    foreach (var portInfo in korisnickiPortovi)
-                    {
-                        if ((DateTime.Now - portInfo.Value).TotalSeconds > 30)
-                        {
-                            zatvaranjePortova.Add(portInfo.Key);
-                        }
-                    }
-
-                    foreach (int port2 in zatvaranjePortova)
-                    {
-                        korisnickiPortovi.Remove(port2);
-                        Console.WriteLine($"Sesija za port {port2} je istekla. Port je zatvoren.");
-                        string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
-                        byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
-                        udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
-                    }
-
-                   
-                    List<Socket> readSockets = new List<Socket> { udpServer.Client };
-                    Socket.Select(readSockets, null, null, 10000);
-                    if (readSockets.Count > 0)
-                    {
-                        byte[] receivedBytes = udpServer.Receive(ref udpClientEndPoint);
-                        string primljenaPoruka = Encoding.UTF8.GetString(receivedBytes);
-                        ObradaKomande(klijentSocket,primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Greška: {e.Message}");
-            }
-        }
-    }*/
-
-
-    private  void ObradaKomande(Socket klijentSocket,string primljenaPoruka, UdpClient udpServer, IPEndPoint udpClientEndPoint, byte[] receivedBytes)
+    private Uredjaji ObradaKomande(Socket klijentSocket,string primljenaPoruka, UdpClient udpServer, IPEndPoint udpClientEndPoint, byte[] receivedBytes)
     {
         BinaryFormatter formatter = new BinaryFormatter();
-        klijentSocket.Blocking = false;
-       
-            if (primljenaPoruka == "LISTA")
+        //klijentSocket.Blocking = false;
+        Uredjaji device=null;
+        
+        if (primljenaPoruka == "LISTA")
             {
                 using (MemoryStream ms = new MemoryStream())
                 {
@@ -353,7 +186,7 @@ public class Server
                     string function = (string)formatter.Deserialize(ms);
                     string newValue = (string)formatter.Deserialize(ms);
 
-                    if (uredjaji.TryGetValue(deviceName, out var device))
+                    if (uredjaji.TryGetValue(deviceName, out device))
                     {
                         device.AzurirajFunkciju(function, newValue);
                         string status = device.DobijStanje();
@@ -371,8 +204,7 @@ public class Server
                     }
                 }
             }
-        
-    }
-    
+        return device;
+    } 
 }
 
