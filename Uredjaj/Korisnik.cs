@@ -15,7 +15,6 @@ namespace Uredjaj
         public bool StatusPrijave { get; set; } = false;  
         public int DodeljeniPort { get; set; } = 0;
 
-        public List<int> Portovi=new List<int>();
 
         public Korisnik(string korisnickoIme, string lozinka, bool statusPrijave, int dodeljeniPort)
         {
@@ -26,11 +25,7 @@ namespace Uredjaj
         }
 
         public Korisnik() { }
-        public string DodeliIme()
-        {
-            return KorisnickoIme;
-        }
-
+       
         public void PrikaziKorisnika()
         {
             Console.WriteLine($"Korisnicko ime:{KorisnickoIme}");
@@ -39,23 +34,6 @@ namespace Uredjaj
             Console.WriteLine($"Dodeljeni port:{DodeljeniPort}");
         }
 
-        public int DodeliPort(string korisnickoIme)
-        {
-            int hashCode = korisnickoIme.GetHashCode();
-            int port = 50001 + (hashCode % 100);
-            Portovi.Add(port);
-
-            while (Portovi.Contains(port))
-            {
-                port++;
-                if (port > 50100) // Resetuje na početak ako dođe do maksimalnog porta
-                {
-                    port = 50001;
-                }
-            }
-
-            Portovi.Add(port); 
-            return port;
-        }
+      
     }
 }

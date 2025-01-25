@@ -15,7 +15,9 @@ namespace Klijenti
     {
         List<(string, string)> IzabraneFunkcije = new List<(string, string)>();
         private readonly Dictionary<string, string> korisnici;
-        UdpClient udpClient = new UdpClient();
+        //UdpClient udpClient = new UdpClient();
+        Socket udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
         IPEndPoint serverEP = new IPEndPoint(IPAddress.Loopback, 6000);
         BinaryFormatter formatter = new BinaryFormatter();
 
@@ -76,9 +78,11 @@ namespace Klijenti
                         if (odgovor == "USPESNO")
                         {
                             Console.WriteLine("Prijava uspešna.");
-                            int port = korisnik.DodeliPort(korisnickoIme);
-                            Console.WriteLine($"Dodeljen port korisniku je:{port}");
-
+                            int primljena = clientSocket.Receive(buffer);
+                            string odgovor1 = Encoding.UTF8.GetString(buffer, 0, primljena);
+                            
+                            Console.WriteLine($"Dodeljeni port za korisnika je {odgovor1}");
+                            
                             while (true)
                             {
                                 UDPKlijent();
@@ -95,7 +99,8 @@ namespace Klijenti
                                 {
                                     string zahtev = "ne";
                                     byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
-                                    udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
+                                    udpSocket.SendTo(zahtevBytes, serverEP);
+                                    //udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
                                     Console.Clear();
 
                                 }
@@ -127,10 +132,17 @@ namespace Klijenti
             {
                 string zahtev = "LISTA";
                 byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
-                udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
+                udpSocket.SendTo(zahtevBytes, serverEP);
+                //udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
 
-                byte[] responseBytes = udpClient.Receive(ref serverEP);
-                string poruka = Encoding.UTF8.GetString(responseBytes);
+
+                EndPoint remoteEP = (EndPoint)serverEP;
+                byte[] responseBytes = new byte[9000];
+                int receivedBytes = udpSocket.ReceiveFrom(responseBytes, ref remoteEP);
+                string poruka = Encoding.UTF8.GetString(responseBytes, 0, receivedBytes);
+
+                //byte[] responseBytes = udpClient.Receive(ref serverEP);
+                //string poruka = Encoding.UTF8.GetString(responseBytes);
 
                 if (poruka == "Sesija je istekla. Ponovno logovanje...")
                 {
@@ -202,13 +214,18 @@ namespace Klijenti
                             formatter.Serialize(ms, funkcija);
                             formatter.Serialize(ms, novaVrednost);
                             byte[] dataToSend = ms.ToArray();
-                            udpClient.Send(dataToSend, dataToSend.Length, serverEP);
-
+                            //udpClient.Send(dataToSend, dataToSend.Length, serverEP);
+                            udpSocket.SendTo(dataToSend, serverEP);
                         }
 
-                        responseBytes = udpClient.Receive(ref serverEP);
-                        Console.WriteLine("Vrednost poslata serveru");
-                        string odgovor1 = Encoding.UTF8.GetString(responseBytes);
+                        responseBytes = new byte[9000];
+                        receivedBytes = udpSocket.ReceiveFrom(responseBytes, ref remoteEP);
+                        string odgovor1 = Encoding.UTF8.GetString(responseBytes, 0, receivedBytes);
+                        
+                        
+                        //responseBytes = udpClient.Receive(ref serverEP);
+                        //Console.WriteLine("Vrednost poslata serveru");
+                        //string odgovor1 = Encoding.UTF8.GetString(responseBytes);
                         Console.WriteLine($"Odgovor servera: {odgovor1}");
                     }
                     else
