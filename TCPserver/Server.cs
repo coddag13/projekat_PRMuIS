@@ -91,11 +91,14 @@ public class Server
             string korisnickoIme = null;
             int port = 0;
 
+            int brojPokusaja = 0;
+            int maxPokusaja = 30;
+            int timeout = 1000;
             while (true)
             {
 
                 List<Socket> readSockets = new List<Socket> { klijentSocket };
-                Socket.Select(readSockets, null, null, 10000);
+                Socket.Select(readSockets, null, null, timeout*1000);
 
                 if (readSockets.Count > 0)
                 {
@@ -132,7 +135,7 @@ public class Server
                 }
 
                 List<Socket> readUdpSockets = new List<Socket> { udpServer.Client };
-                Socket.Select(readUdpSockets, null, null, 10000);
+                Socket.Select(readUdpSockets, null, null,timeout*  1000);
 
 
                 if (readUdpSockets.Count > 0)
@@ -141,6 +144,8 @@ public class Server
                     {
                         byte[] receivedBytes = udpServer.Receive(ref udpClientEndPoint);
                         string primljenaPoruka = Encoding.UTF8.GetString(receivedBytes);
+
+                        brojPokusaja = 0;
 
                         if (primljenaPoruka == "ne")
                         {
@@ -153,7 +158,7 @@ public class Server
                     }
                     catch
                     {
-                            if (udpServer.Client != null)
+                           /* if (udpServer.Client != null)
                             {
                                 if (udpServer.Client.Connected)
                                 {
@@ -182,12 +187,44 @@ public class Server
                                         Console.WriteLine($"Greška prilikom zatvaranja TCP socket-a: {socketEx.Message}");
                                     }
                                 }
-                            }
+                            }*/
                         }
                     }
+                else
+                {
+                    brojPokusaja++;
+                    Console.WriteLine($"Pokusaj {brojPokusaja}: nije primljena poruka...");
 
+                    if (brojPokusaja >= maxPokusaja)
+                    {
+                        Console.Clear();
+                        Console.WriteLine($"Sesija za korisnika {korisnickoIme} na portu {port} je istekla.");
+                        Portovi.Remove(port);
+
+                        string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
+                        byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
+                        udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
+
+                        if (klijentSocket.Connected)
+                        {
+                            try
+                            {
+                                klijentSocket.Shutdown(SocketShutdown.Both);
+                                klijentSocket.Close();
+                                Console.WriteLine("TCP socket je zatvoren.");
+                            }
+                            catch (Exception socketEx)
+                            {
+                                Console.WriteLine($"Greška prilikom zatvaranja TCP socket-a: {socketEx.Message}");
+                            }
+                        }
+
+                        break; // Prekidamo petlju i završavamo sesiju
+                    }
+                }
             }
-        }
+            
+            }
         catch (Exception e)
         {
             Console.WriteLine($"Greška: {e.Message}");
