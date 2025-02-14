@@ -92,7 +92,7 @@ public class Server
             int port = 0;
 
             int brojPokusaja = 0;
-            int maxPokusaja = 30;
+            int maxPokusaja = 15;
             int timeout = 1000;
             while (true)
             {
@@ -158,38 +158,9 @@ public class Server
                     }
                     catch
                     {
-                           /* if (udpServer.Client != null)
-                            {
-                                if (udpServer.Client.Connected)
-                                {
-                                    string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
-                                    byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
-                                    udpServer.Send(porukaBytes, porukaBytes.Length, udpClientEndPoint);
-                                }
-
-                                Console.Clear();
-                                Console.WriteLine($"Sesija za port {port} je istekla. Port je zatvoren.");
-                                Portovi.Remove(port);
-
-                                udpServer.Close();
-                                Console.WriteLine($"UDP socket za port {port} je zatvoren.");
-
-                                if (klijentSocket.Connected)
-                                {
-                                    try
-                                    {
-                                        klijentSocket.Shutdown(SocketShutdown.Both);
-                                        klijentSocket.Close();
-                                        Console.WriteLine("TCP socket je zatvoren.");
-                                    }
-                                    catch (Exception socketEx)
-                                    {
-                                        Console.WriteLine($"Greška prilikom zatvaranja TCP socket-a: {socketEx.Message}");
-                                    }
-                                }
-                            }*/
-                        }
+                         
                     }
+                }
                 else
                 {
                     brojPokusaja++;
@@ -219,7 +190,14 @@ public class Server
                             }
                         }
 
-                        break; // Prekidamo petlju i završavamo sesiju
+                        udpServer.Close(); 
+                        udpServer = new UdpClient(6000);
+
+                        korisnickoIme = null;
+                        port = 0;
+                        device = null;
+                        udpClientEndPoint = null;
+                        return;
                     }
                 }
             }
@@ -230,8 +208,6 @@ public class Server
             Console.WriteLine($"Greška: {e.Message}");
         }
     }
-
-
 
 
     private Uredjaji ObradaKomande(Socket klijentSocket,string primljenaPoruka, UdpClient udpServer, IPEndPoint udpClientEndPoint, byte[] receivedBytes)

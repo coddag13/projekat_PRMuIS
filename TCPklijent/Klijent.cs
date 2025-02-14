@@ -148,8 +148,13 @@ namespace Klijenti
                 {
                     Console.Clear();
                     Console.WriteLine("Sesija je istekla. Bićete vraćeni na prijavu.");
+
                     IzabraneFunkcije.Clear();
+
+                    udpSocket.Close();
+                    udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                     TCPKlijent();
+                    return;
                     
                 }
                 else
