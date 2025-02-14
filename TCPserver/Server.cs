@@ -9,6 +9,7 @@ using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uredjaj;
 
@@ -21,6 +22,8 @@ public class Server
     private UdpClient udpServer = new UdpClient(6000);
 
     private List<int> Portovi=new List<int>();
+
+    private Dictionary<string, (IPEndPoint EndPoint, int Port)> aktivniKorisnici = new Dictionary<string, (IPEndPoint, int)>();
 
     public Server()
     {
@@ -62,6 +65,8 @@ public class Server
         var serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         serverSocket.Bind(new IPEndPoint(IPAddress.Any, 50000));
         serverSocket.Listen(5);
+
+        Task.Run(() => PrikaziStanjeSistema());
 
         while (true)
         {
@@ -124,9 +129,10 @@ public class Server
                         port = DodeliPort(korisnickoIme);
                         udpClientEndPoint = new IPEndPoint(IPAddress.Any, port);
                         Console.WriteLine($"Port:{port}");
+                        aktivniKorisnici[korisnickoIme] = (udpClientEndPoint, port);
 
-                        string od = $"{port}";
-                        klijentSocket.Send(Encoding.UTF8.GetBytes(od));
+                        string odgovor = $"{port}";
+                        klijentSocket.Send(Encoding.UTF8.GetBytes(odgovor));
                     }
                     else
                     {
@@ -171,6 +177,7 @@ public class Server
                         Console.Clear();
                         Console.WriteLine($"Sesija za korisnika {korisnickoIme} na portu {port} je istekla.");
                         Portovi.Remove(port);
+                        aktivniKorisnici.Remove(korisnickoIme);
 
                         string porukaZaKlijenta = "Sesija je istekla. Ponovno logovanje...";
                         byte[] porukaBytes = Encoding.UTF8.GetBytes(porukaZaKlijenta);
@@ -253,5 +260,29 @@ public class Server
             }
         return device;
     } 
+
+
+private void PrikaziStanjeSistema()
+{
+    while (true)
+    {
+        Console.Clear();
+        Console.WriteLine("=== Stanje sistema ===");
+
+        Console.WriteLine("\nAktivni korisnici:");
+        foreach (var korisnik in aktivniKorisnici)
+        {
+            Console.WriteLine($"- {korisnik.Key} (Port: {korisnik.Value.Port})");
+        }
+
+        Console.WriteLine("\nStanje uređaja:");
+        foreach (var uredjaj in uredjaji)
+        {
+            Console.WriteLine($"- {uredjaj.Key}: {uredjaj.Value.DobijStanje()}");
+        }
+
+        Thread.Sleep(50000); 
+    }
+}
 }
 
