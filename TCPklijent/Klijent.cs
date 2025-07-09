@@ -97,11 +97,28 @@ namespace Klijenti
 
                                 if (odgovorNaPitanje.ToLower() == "ne")
                                 {
-                                    string zahtev = "ne";
+                                    /*string zahtev = "ne";
                                     byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
                                     udpSocket.SendTo(zahtevBytes, serverEP);
                                     //udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
                                     Console.Clear();
+                                    */
+
+                                    string zahtev = "ne";
+                                    byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
+                                    udpSocket.SendTo(zahtevBytes, serverEP);
+
+                                   /* byte[] responseBytes = new byte[1024];
+                                    EndPoint remoteEP = (EndPoint)serverEP;
+                                    int receivedBytes = udpSocket.ReceiveFrom(responseBytes, ref remoteEP);
+                                    string odgovor2 = Encoding.UTF8.GetString(responseBytes, 0, receivedBytes);
+
+                                    Console.WriteLine($"\nServer: {odgovor2}");
+                                    Console.WriteLine("Aplikacija se gasi.");
+                                   */
+
+                                    udpSocket.Close();
+                                    Environment.Exit(0);
 
                                 }
                                 else
@@ -172,6 +189,7 @@ namespace Klijenti
                     }
 
                     Console.WriteLine("Unesite broj uređaja za podešavanje:");
+                   
                     int izbor = int.Parse(Console.ReadLine()) - 1;
 
                     if (izbor >= 0 && izbor < uredjaji.Count)

@@ -63,9 +63,6 @@ public abstract class Uredjaji
 
 }
 
-
-
-
 [Serializable]
 public class Svetlo : Uredjaji
 {

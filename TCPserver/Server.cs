@@ -156,8 +156,9 @@ public class Server
                         if (primljenaPoruka == "ne")
                         {
                             Console.Clear();
-                            Console.WriteLine($"Korisnik: {korisnickoIme} i njegov port je: {port}");
-                            device?.PrikaziSveUredjaje(uredjaji.Values.ToList());
+                            Console.WriteLine($"Korisnik {korisnickoIme} je izabrao 'ne'. Server se gasi...");
+
+                            Environment.Exit(0); 
                         }
 
                         device = ObradaKomande(klijentSocket, primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
@@ -170,7 +171,7 @@ public class Server
                 else
                 {
                     brojPokusaja++;
-                    Console.WriteLine($"Pokusaj {brojPokusaja}: nije primljena poruka...");
+                   // Console.WriteLine($"Pokusaj {brojPokusaja}: nije primljena poruka...");
 
                     if (brojPokusaja >= maxPokusaja)
                     {
