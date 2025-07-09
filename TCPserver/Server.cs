@@ -89,7 +89,7 @@ public class Server
             Console.WriteLine("Server je pokrenut...");
 
             IPEndPoint udpClientEndPoint = null;
-            //IPEndPoint udpClientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            
             klijentSocket.Blocking = false;
 
             Uredjaji device = null;
@@ -97,7 +97,7 @@ public class Server
             int port = 0;
 
             int brojPokusaja = 0;
-            int maxPokusaja = 15;
+            int maxPokusaja = 5;
             int timeout = 1000;
             while (true)
             {
@@ -157,6 +157,7 @@ public class Server
                         {
                             Console.Clear();
                             Console.WriteLine($"Korisnik {korisnickoIme} je izabrao 'ne'. Server se gasi...");
+                            
                             Thread.Sleep(1000);
                             Environment.Exit(0); 
                         }
@@ -171,7 +172,7 @@ public class Server
                 else
                 {
                     brojPokusaja++;
-                   // Console.WriteLine($"Pokusaj {brojPokusaja}: nije primljena poruka...");
+                    Console.WriteLine($"Pokusaj {brojPokusaja}: nije primljena poruka...");
 
                     if (brojPokusaja >= maxPokusaja)
                     {
@@ -198,9 +199,7 @@ public class Server
                             }
                         }
 
-                        udpServer.Close(); 
-                        udpServer = new UdpClient(6000);
-
+                         
                         korisnickoIme = null;
                         port = 0;
                         device = null;

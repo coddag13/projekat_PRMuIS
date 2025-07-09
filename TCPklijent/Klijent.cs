@@ -18,7 +18,7 @@ namespace Klijenti
         private readonly Dictionary<string, string> korisnici;
         //UdpClient udpClient = new UdpClient();
         Socket udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-
+         bool sesijaIstekla = false;
         IPEndPoint serverEP = new IPEndPoint(IPAddress.Loopback, 6000);
         BinaryFormatter formatter = new BinaryFormatter();
 
@@ -46,7 +46,7 @@ namespace Klijenti
                 {
                     using (var clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                     {
-
+                        bool sesijaIstekla = false;
                         Korisnik korisnik = new Korisnik();
                         var klijent = new Klijent();
                         Console.WriteLine("Povezivanje na server...");
@@ -87,7 +87,12 @@ namespace Klijenti
                             while (true)
                             {
                                 UDPKlijent();
-                                string odgovorNaPitanje;
+                                if (sesijaIstekla)
+                                {
+                                    sesijaIstekla = false;
+                                    break;
+                                }
+                                    string odgovorNaPitanje;
 
                                 do
                                 {
@@ -98,33 +103,36 @@ namespace Klijenti
 
                                 if (odgovorNaPitanje.ToLower() == "ne")
                                 {
-                                    /*string zahtev = "ne";
-                                    byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
-                                    udpSocket.SendTo(zahtevBytes, serverEP);
-                                    //udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
-                                    Console.Clear();
-                                    */
+                                    string odg;
+                                    do
+                                    {
+                                        Console.WriteLine("\nDa li želite ponovo da se ulogujete? (da/ne)");
+                                        odg = Console.ReadLine();
 
-                                    string zahtev = "ne";
-                                    byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
-                                    udpSocket.SendTo(zahtevBytes, serverEP);
+                                    } while (odg.ToLower() != "da" && odg.ToLower() != "ne");
 
-                                   /* byte[] responseBytes = new byte[1024];
-                                    EndPoint remoteEP = (EndPoint)serverEP;
-                                    int receivedBytes = udpSocket.ReceiveFrom(responseBytes, ref remoteEP);
-                                    string odgovor2 = Encoding.UTF8.GetString(responseBytes, 0, receivedBytes);
-
-                                    Console.WriteLine($"\nServer: {odgovor2}");
-                                    Console.WriteLine("Aplikacija se gasi.");
-                                   */
-                                   Thread.Sleep(1000);
-                                    udpSocket.Close();
-                                    Environment.Exit(0);
+                                    if(odg.ToLower() =="ne")
+                                    {
+                                        string zahtev = "ne";
+                                        byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
+                                        udpSocket.SendTo(zahtevBytes, serverEP);
+                                        Thread.Sleep(1000);
+                                        udpSocket.Close();
+                                        Environment.Exit(0);
+                                    }
+                                    else
+                                    {
+                                    break;
+                                      
+                                    }
+                                    
 
                                 }
                                 else
                                 {
                                     Console.Clear();
+                                    
+                                    
                                 }
 
                             }
@@ -143,7 +151,8 @@ namespace Klijenti
                 }
             }
         }
-
+       
+        
         public void UDPKlijent()
         {
             try
@@ -151,117 +160,133 @@ namespace Klijenti
                 string zahtev = "LISTA";
                 byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
                 udpSocket.SendTo(zahtevBytes, serverEP);
-                //udpClient.Send(zahtevBytes, zahtevBytes.Length, serverEP);
-
 
                 EndPoint remoteEP = (EndPoint)serverEP;
                 byte[] responseBytes = new byte[9000];
                 int receivedBytes = udpSocket.ReceiveFrom(responseBytes, ref remoteEP);
-                string poruka = Encoding.UTF8.GetString(responseBytes, 0, receivedBytes);
 
-                //byte[] responseBytes = udpClient.Receive(ref serverEP);
-                //string poruka = Encoding.UTF8.GetString(responseBytes);
+                if (ProveriSesiju(responseBytes, receivedBytes))
+                    return;
 
-                if (poruka == "Sesija je istekla. Ponovno logovanje...")
+                List<Uredjaji> uredjaji;
+                using (MemoryStream ms = new MemoryStream(responseBytes))
                 {
-                    Console.Clear();
-                    Console.WriteLine("Sesija je istekla. Bićete vraćeni na prijavu.");
+                    uredjaji = (List<Uredjaji>)formatter.Deserialize(ms);
+                }
 
+                Console.WriteLine("Dostupni uređaji:");
+                for (int i = 0; i < uredjaji.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {uredjaji[i].Ime}");
+                }
+
+                Console.WriteLine("Unesite broj uređaja za podešavanje:");
+                int izbor = int.Parse(Console.ReadLine()) - 1;
+
+                if (izbor >= 0 && izbor < uredjaji.Count)
+                {
+                    var izabraniUredjaj = uredjaji[izbor];
+
+                    Console.WriteLine($"Izabrali ste uređaj: {izabraniUredjaj.Ime}");
+                    Console.WriteLine("Trenutne funkcije i vrednosti:");
                     IzabraneFunkcije.Clear();
 
-                    udpSocket.Close();
-                    udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                    TCPKlijent();
-                    return;
+                    foreach (var funkcija1 in izabraniUredjaj.Funkcije)
+                    {
+                        Console.WriteLine($"{funkcija1.Key}: {funkcija1.Value}");
+                        IzabraneFunkcije.Add((funkcija1.Key, funkcija1.Value));
+                    }
+
+                    Console.WriteLine("Unesite ime funkcije za promenu:");
+                    string funkcija = Console.ReadLine();
+                    bool funkcijaPronadjena = false;
+
+                    while (!funkcijaPronadjena)
+                    {
+                        foreach (var f in IzabraneFunkcije)
+                        {
+                            if (funkcija == f.Item1)
+                            {
+                                funkcijaPronadjena = true;
+                                break;
+                            }
+                        }
+
+                        if (!funkcijaPronadjena)
+                        {
+                            Console.WriteLine("Funkcija nije pronađena. Ponovo unesite ime funkcije za promenu:");
+                            funkcija = Console.ReadLine();
+                        }
+                    }
                     
+                    
+                    
+                    Console.WriteLine("Unesite novu vrednost:");
+                    string novaVrednost = Console.ReadLine();
+
+                    // 🧠 Provera sesije PRE slanja izmene serveru
+                    byte[] testBytes = new byte[1024];
+                    EndPoint tempEP = (EndPoint)serverEP;
+                    udpSocket.ReceiveTimeout = 500;
+
+                    try
+                    {
+                        int duzina = udpSocket.ReceiveFrom(testBytes, ref tempEP);
+                        if (ProveriSesiju(testBytes, duzina))
+                            return;
+                    }
+                    catch (SocketException)
+                    {
+                        // nema poruke, nastavljamo
+                    }
+
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        formatter.Serialize(ms, izabraniUredjaj.Ime);
+                        formatter.Serialize(ms, funkcija);
+                        formatter.Serialize(ms, novaVrednost);
+                        byte[] dataToSend = ms.ToArray();
+                        udpSocket.SendTo(dataToSend, serverEP);
+                    }
+                    
+                    responseBytes = new byte[9000];
+                    receivedBytes = udpSocket.ReceiveFrom(responseBytes, ref remoteEP);
+
+                    if (ProveriSesiju(responseBytes, receivedBytes))
+                        return;
+
+                    string odgovor1 = Encoding.UTF8.GetString(responseBytes, 0, receivedBytes);
+                    Console.WriteLine($"Odgovor servera: {odgovor1}");
                 }
                 else
                 {
-                    List<Uredjaji> uredjaji;
-                    using (MemoryStream ms = new MemoryStream(responseBytes))
-                    {
-                        uredjaji = (List<Uredjaji>)formatter.Deserialize(ms);
-                    }
-
-                    Console.WriteLine("Dostupni uređaji:");
-                    for (int i = 0; i < uredjaji.Count; i++)
-                    {
-                        Console.WriteLine($"{i + 1}. {uredjaji[i].Ime}");
-                    }
-
-                    Console.WriteLine("Unesite broj uređaja za podešavanje:");
-                   
-                    int izbor = int.Parse(Console.ReadLine()) - 1;
-
-                    if (izbor >= 0 && izbor < uredjaji.Count)
-                    {
-                        var izabraniUredjaj = uredjaji[izbor];
-
-                        Console.WriteLine($"Izabrali ste uređaj: {izabraniUredjaj.Ime}");
-                        Console.WriteLine("Trenutne funkcije i vrednosti:");
-                        foreach (var funkcija1 in izabraniUredjaj.Funkcije)
-                        {
-                            Console.WriteLine($"{funkcija1.Key}: {funkcija1.Value}");
-                            IzabraneFunkcije.Add((funkcija1.Key, funkcija1.Value));
-                        }
-
-                        Console.WriteLine("Unesite ime funkcije za promenu:");
-                        string funkcija = Console.ReadLine();
-                        bool funkcijaPronadjena = false;
-
-                        while (!funkcijaPronadjena)
-                        {
-                            for (int i = 0; i < IzabraneFunkcije.Count; i++)
-                            {
-                                if (funkcija == IzabraneFunkcije[i].Item1)
-                                {
-                                    funkcijaPronadjena = true;
-                                    break;
-                                }
-                            }
-
-                            if (!funkcijaPronadjena)
-                            {
-                                Console.WriteLine("Funkcija nije pronađena. Ponovo unesite ime funkcije za promenu:");
-                                funkcija = Console.ReadLine();
-                            }
-                        }
-
-
-                        Console.WriteLine("Unesite novu vrednost:");
-                        string novaVrednost = Console.ReadLine();
-
-
-                        using (MemoryStream ms = new MemoryStream())
-                        {
-                            formatter.Serialize(ms, izabraniUredjaj.Ime);
-                            formatter.Serialize(ms, funkcija);
-                            formatter.Serialize(ms, novaVrednost);
-                            byte[] dataToSend = ms.ToArray();
-                            //udpClient.Send(dataToSend, dataToSend.Length, serverEP);
-                            udpSocket.SendTo(dataToSend, serverEP);
-                        }
-
-                        responseBytes = new byte[9000];
-                        receivedBytes = udpSocket.ReceiveFrom(responseBytes, ref remoteEP);
-                        string odgovor1 = Encoding.UTF8.GetString(responseBytes, 0, receivedBytes);
-                        
-                        
-                        //responseBytes = udpClient.Receive(ref serverEP);
-                        //Console.WriteLine("Vrednost poslata serveru");
-                        //string odgovor1 = Encoding.UTF8.GetString(responseBytes);
-                        Console.WriteLine($"Odgovor servera: {odgovor1}");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Pogrešan izbor uređaja.");
-                    }
+                    Console.WriteLine("Pogrešan izbor uređaja.");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Greška: {ex.Message}");
             }
+        }
+        private bool ProveriSesiju(byte[] porukaBytes, int duzinaPoruke)
+        {
+            string poruka = Encoding.UTF8.GetString(porukaBytes, 0, duzinaPoruke);
+            if (poruka == "Sesija je istekla. Ponovno logovanje...")
+            {
+                Console.Clear();
+                Console.WriteLine("Sesija je istekla. Bićete vraćeni na prijavu.");
+
+                IzabraneFunkcije.Clear();
+                udpSocket.Close();
+                udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                
+                Thread.Sleep(2000);
+                sesijaIstekla = true;
+                TCPKlijent();
+                return true;
+            }
+
+            return false;
         }
     }
 }
