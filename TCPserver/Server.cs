@@ -157,7 +157,7 @@ public class Server
                         {
                             Console.Clear();
                             Console.WriteLine($"Korisnik {korisnickoIme} je izabrao 'ne'. Server se gasi...");
-
+                            Thread.Sleep(1000);
                             Environment.Exit(0); 
                         }
 

@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading;
 using Uredjaj;
 
 namespace Klijenti
@@ -116,7 +117,7 @@ namespace Klijenti
                                     Console.WriteLine($"\nServer: {odgovor2}");
                                     Console.WriteLine("Aplikacija se gasi.");
                                    */
-
+                                   Thread.Sleep(1000);
                                     udpSocket.Close();
                                     Environment.Exit(0);
 
