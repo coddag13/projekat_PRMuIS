@@ -21,7 +21,7 @@ public class Server
 
     private UdpClient udpServer = new UdpClient(6000);
 
-    private List<int> Portovi=new List<int>();
+    private List<int> Portovi = new List<int>();
 
     private Dictionary<string, (IPEndPoint EndPoint, int Port)> aktivniKorisnici = new Dictionary<string, (IPEndPoint, int)>();
 
@@ -34,7 +34,7 @@ public class Server
             { "TV", new TV() },
             { "Vrata", new Vrata() }
         };
-       
+
         korisnici = new Dictionary<string, string>
         {
             { "teodora", "333" },
@@ -50,7 +50,7 @@ public class Server
         while (Portovi.Contains(port))
         {
             port++;
-            if (port > 50100) 
+            if (port > 50100)
             {
                 port = 50001;
             }
@@ -74,7 +74,7 @@ public class Server
             Task.Run(() => Serveri(klijentSocket));
         }
     }
-   
+
     public static void Main(string[] args)
     {
         var server = new Server();
@@ -89,7 +89,6 @@ public class Server
             Console.WriteLine("Server je pokrenut...");
 
             IPEndPoint udpClientEndPoint = null;
-            
             klijentSocket.Blocking = false;
 
             Uredjaji device = null;
@@ -97,13 +96,13 @@ public class Server
             int port = 0;
 
             int brojPokusaja = 0;
-            int maxPokusaja = 5;
+            int maxPokusaja = 15;
             int timeout = 1000;
             while (true)
             {
 
                 List<Socket> readSockets = new List<Socket> { klijentSocket };
-                Socket.Select(readSockets, null, null, timeout*1000);
+                Socket.Select(readSockets, null, null, timeout * 1000);
 
                 if (readSockets.Count > 0)
                 {
@@ -120,7 +119,6 @@ public class Server
 
                     korisnickoIme = podaci[0];
                     string lozinka = podaci[1];
-
 
                     if (korisnici.TryGetValue(korisnickoIme, out var validnaLozinka) && validnaLozinka == lozinka)
                     {
@@ -141,8 +139,7 @@ public class Server
                 }
 
                 List<Socket> readUdpSockets = new List<Socket> { udpServer.Client };
-                Socket.Select(readUdpSockets, null, null,timeout*  1000);
-
+                Socket.Select(readUdpSockets, null, null, timeout * 1000);
 
                 if (readUdpSockets.Count > 0)
                 {
@@ -156,23 +153,19 @@ public class Server
                         if (primljenaPoruka == "ne")
                         {
                             Console.Clear();
-                            Console.WriteLine($"Korisnik {korisnickoIme} je izabrao 'ne'. Server se gasi...");
-                            
-                            Thread.Sleep(1000);
-                            Environment.Exit(0); 
-                        }
+                            Console.WriteLine($"Korisnik {korisnickoIme} je 		izabrao 'ne'. Server se gasi...");
 
+                            Thread.Sleep(1000);
+                            Environment.Exit(0);
+                        }
                         device = ObradaKomande(klijentSocket, primljenaPoruka, udpServer, udpClientEndPoint, receivedBytes);
                     }
                     catch
-                    {
-                         
-                    }
+                    {}
                 }
                 else
                 {
                     brojPokusaja++;
-                    Console.WriteLine($"Pokusaj {brojPokusaja}: nije primljena poruka...");
 
                     if (brojPokusaja >= maxPokusaja)
                     {
@@ -199,7 +192,9 @@ public class Server
                             }
                         }
 
-                         
+                        udpServer.Close();
+                        udpServer = new UdpClient(6000);
+
                         korisnickoIme = null;
                         port = 0;
                         device = null;
@@ -208,8 +203,8 @@ public class Server
                     }
                 }
             }
-            
-            }
+
+        }
         catch (Exception e)
         {
             Console.WriteLine($"Greška: {e.Message}");
@@ -217,72 +212,71 @@ public class Server
     }
 
 
-    private Uredjaji ObradaKomande(Socket klijentSocket,string primljenaPoruka, UdpClient udpServer, IPEndPoint udpClientEndPoint, byte[] receivedBytes)
+    private Uredjaji ObradaKomande(Socket klijentSocket, string primljenaPoruka, UdpClient udpServer, IPEndPoint udpClientEndPoint, byte[] receivedBytes)
     {
         BinaryFormatter formatter = new BinaryFormatter();
-        Uredjaji device=null;
-        
+        Uredjaji device = null;
+
         if (primljenaPoruka == "LISTA")
+        {
+            using (MemoryStream ms = new MemoryStream())
             {
-                using (MemoryStream ms = new MemoryStream())
+                formatter.Serialize(ms, uredjaji.Values.ToList());
+                byte[] response = ms.ToArray();
+                udpServer.Send(response, response.Length, udpClientEndPoint);
+            }
+            Console.WriteLine("Lista je poslata klijentu.");
+        }
+        else if (receivedBytes != null && receivedBytes.Length > 0)
+        {
+            using (MemoryStream ms = new MemoryStream(receivedBytes))
+            {
+                string deviceName = (string)formatter.Deserialize(ms);
+                string function = (string)formatter.Deserialize(ms);
+                string newValue = (string)formatter.Deserialize(ms);
+
+                if (uredjaji.TryGetValue(deviceName, out device))
                 {
-                    formatter.Serialize(ms, uredjaji.Values.ToList());
-                    byte[] response = ms.ToArray();
+                    device.AzurirajFunkciju(function, newValue);
+                    string status = device.DobijStanje();
+                    Console.WriteLine($"Obrada komande za uređaj: {deviceName}, funkcija: {function}, nova vrednost: {newValue}");
+
+                    byte[] response = Encoding.UTF8.GetBytes($"Uspješno: {status}");
+                    device.PrikaziSveUredjaje(uredjaji.Values.ToList());
+
                     udpServer.Send(response, response.Length, udpClientEndPoint);
                 }
-                Console.WriteLine("Lista je poslata klijentu.");
-            }
-            else if (receivedBytes != null && receivedBytes.Length > 0)
-            {
-                using (MemoryStream ms = new MemoryStream(receivedBytes))
+                else
                 {
-                    string deviceName = (string)formatter.Deserialize(ms);
-                    string function = (string)formatter.Deserialize(ms);
-                    string newValue = (string)formatter.Deserialize(ms);
-
-                    if (uredjaji.TryGetValue(deviceName, out device))
-                    {
-                        device.AzurirajFunkciju(function, newValue);
-                        string status = device.DobijStanje();
-                        Console.WriteLine($"Obrada komande za uređaj: {deviceName}, funkcija: {function}, nova vrednost: {newValue}");
-
-                        byte[] response = Encoding.UTF8.GetBytes($"Uspješno: {status}");
-                        device.PrikaziSveUredjaje(uredjaji.Values.ToList());
-
-                        udpServer.Send(response, response.Length, udpClientEndPoint);
-                    }
-                    else
-                    {
-                        byte[] response = Encoding.UTF8.GetBytes("Greška: Uređaj nije pronađen.");
-                        udpServer.Send(response, response.Length, udpClientEndPoint);
-                    }
+                    byte[] response = Encoding.UTF8.GetBytes("Greška: Uređaj nije pronađen.");
+                    udpServer.Send(response, response.Length, udpClientEndPoint);
                 }
             }
+        }
         return device;
-    } 
+    }
 
 
-private void PrikaziStanjeSistema()
-{
-    while (true)
+    private void PrikaziStanjeSistema()
     {
-        Console.Clear();
-        Console.WriteLine("=== Stanje sistema ===");
-
-        Console.WriteLine("\nAktivni korisnici:");
-        foreach (var korisnik in aktivniKorisnici)
+        while (true)
         {
-            Console.WriteLine($"- {korisnik.Key} (Port: {korisnik.Value.Port})");
-        }
+            Console.Clear();
+            Console.WriteLine("=== Stanje sistema ===");
 
-        Console.WriteLine("\nStanje uređaja:");
-        foreach (var uredjaj in uredjaji)
-        {
-            Console.WriteLine($"- {uredjaj.Key}: {uredjaj.Value.DobijStanje()}");
-        }
+            Console.WriteLine("\nAktivni korisnici:");
+            foreach (var korisnik in aktivniKorisnici)
+            {
+                Console.WriteLine($"- {korisnik.Key} (Port: {korisnik.Value.Port})");
+            }
 
-        Thread.Sleep(50000); 
+            Console.WriteLine("\nStanje uređaja:");
+            foreach (var uredjaj in uredjaji)
+            {
+                Console.WriteLine($"- {uredjaj.Key}: {uredjaj.Value.DobijStanje()}");
+            }
+
+            Thread.Sleep(50000);
+        }
     }
 }
-}
-

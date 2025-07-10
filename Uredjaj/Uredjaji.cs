@@ -58,9 +58,6 @@ public abstract class Uredjaji
 
         Console.WriteLine(new string('-', 80));
     }
-
-
-
 }
 
 [Serializable]
