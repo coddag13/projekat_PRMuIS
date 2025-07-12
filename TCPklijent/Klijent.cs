@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using Uredjaj;
+using System.Threading;
 
 namespace Klijenti
 {
@@ -99,7 +100,7 @@ namespace Klijenti
                                     string zahtev = "ne";
                                     byte[] zahtevBytes = Encoding.UTF8.GetBytes(zahtev);
                                     udpSocket.SendTo(zahtevBytes, serverEP);
-
+                                    Thread.Sleep(1000);
                                     udpSocket.Close();
                                     Environment.Exit(0);
                                 }

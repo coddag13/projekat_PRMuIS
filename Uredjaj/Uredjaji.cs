@@ -9,8 +9,7 @@ public abstract class Uredjaji
 {
     public string Ime { get; set; }
     public Dictionary<string, string> Funkcije { get; set; }
-    public List<string> LogAktivnosti { get; set; } = new List<string>();
-
+    public Dictionary<string, DateTime> LogAktivnosti { get; set; } = new Dictionary<string, DateTime>();
     public Uredjaji(string ime)
     {
         Ime = ime;
@@ -22,6 +21,7 @@ public abstract class Uredjaji
         if (Funkcije.ContainsKey(funkcija))
         {
             Funkcije[funkcija] = novaVrednost;
+            LogAktivnosti[funkcija] = DateTime.Now;
         }
         else
         {
@@ -51,7 +51,10 @@ public abstract class Uredjaji
         {
             foreach (var funkcija in uredjaj.Funkcije)
             {
-                string vremenskaOznaka = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                string vremenskaOznaka = uredjaj.LogAktivnosti.ContainsKey(funkcija.Key)
+                 ? uredjaj.LogAktivnosti[funkcija.Key].ToString("yyyy-MM-dd HH:mm:ss")
+                 : "N/A";
+                
                 Console.WriteLine($"{uredjaj.Ime,-20} {funkcija.Key,-20} {funkcija.Value,-15} {vremenskaOznaka,-20}");
             }
         }
