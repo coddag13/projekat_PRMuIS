@@ -153,7 +153,7 @@ public class Server
                         if (primljenaPoruka == "ne")
                         {
                             Console.Clear();
-                            Console.WriteLine($"Korisnik {korisnickoIme} je 		izabrao 'ne'. Server se gasi...");
+                            Console.WriteLine($"Korisnik {korisnickoIme} je izabrao 'ne'. Server se gasi...");
 
                             Thread.Sleep(1000);
                             Environment.Exit(0);
